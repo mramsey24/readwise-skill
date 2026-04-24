@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "build-persona": {
+      "source": "readwiseio/readwise-skills",
+      "sourceType": "github",
+      "computedHash": "5e2a885ec4c648b115ee9075ae05f4386a325defcc67784e1818e5d1f3aa455d"
+    },
+    "readwise-cli": {
+      "source": "readwiseio/readwise-skills",
+      "sourceType": "github",
+      "computedHash": "aba7cbbaae3279f64c53a76e63744e65ba2093889935c184ff1ccb8da75576a1"
+    }
+  }
+}
