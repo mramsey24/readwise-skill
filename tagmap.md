@@ -7,6 +7,7 @@ If the title contains "Git" tag it with "git".
 If the title contains "Github" tag it with "github".
 If the title contains "Pixel" tag it with "android".
 If the title contains "Firefox" tag it with "mozilla"
-If the title contains "Samsung" tag it with "samsung".
+If the title contains "Samsung" tag it with "triaged" and "samsung" and move it to "later".
 If the title contains "AMD" tag it with "linux".
 If the title contains "Chrome" tag it with "chrome".
+If the title contains "Star Wars" tag it with "star-wars" and move to "Inbox"
