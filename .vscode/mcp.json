@@ -1,0 +1,20 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp.json",
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "readwise-token",
+      "description": "Readwise access token from https://readwise.io/access_token",
+      "password": true
+    }
+  ],
+  "servers": {
+    "readwise": {
+      "type": "http",
+      "url": "https://mcp2.readwise.io/mcp",
+      "headers": {
+        "Authorization": "Token ${input:readwise-token}"
+      }
+    }
+  }
+}
