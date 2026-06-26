@@ -33,17 +33,32 @@ readwise readwise-list-highlights --help
 
 Add `--json` to any command for machine-readable output. Use `--refresh` to force-refresh cached data.
 
-## User Preferences & Filtering
+### Authentication Error Handling
 
-**CRITICAL INSTRUCTION:** Always check for the existence of `readwise_preferences.md` in the user's workspace before fetching or presenting any data.
-If the file exists, you MUST read its contents and apply the natural language rules defined within it to filter, sort, or modify the output of ALL `readwise` CLI commands (including searching highlights, listing documents, etc.) before presenting the final results to the user.
+If any CLI command returns an authentication error (e.g., 401 Unauthorized, "token expired", or "invalid token"), **stop execution immediately**. Inform the user that their Readwise token may have expired or been revoked, then prompt them to run:
+```bash
+readwise login-with-token <new_token>
+```
+Direct the user to https://readwise.io/access_token to obtain a fresh token. After they re-authenticate, retry the failed command.
 
-## Action History Logging
+## Pre-Flight Checklist (Run Before Every Command)
 
-**CRITICAL INSTRUCTION:** Always maintain a file named `readwise_history.md` in the workspace root. 
-If it doesn't exist, create it with the headers: `| Date/Time | Action Taken | Document Link |`.
-Whenever you perform a **tagging** or **archiving** action via the CLI, you MUST append a record of that action to the table.
-The record must include the specific action taken (e.g., "Added tags: ai, vs-code" or "Archived") and a markdown link to the item in Readwise using the item's title as the link text.
+1. **Check for readwise_history.md**: If it does not exist in the workspace root, create it with headers: `| Date/Time | Action Taken | Document Link |`.
+2. **Check for readwise_preferences.md**: If it exists, read it and hold its natural-language rules in context. If a rule cannot be mapped to a supported CLI flag or post-processing filter, skip it and note in the output: "Note: The preference rule \"[rule text]\" could not be applied because [reason]."
+3. **Execute the requested CLI command(s)**: Perform the user's requested action using the appropriate `readwise` CLI command.
+4. **Apply preferences filtering** (if applicable): If readwise_preferences.md exists, apply its rules to filter, sort, or modify the output before presenting to the user. **Exception:** If the user's explicit request in the current turn directly contradicts a preference rule, follow the user's request and inform them which preference rule was overridden.
+5. **Log to history** (if applicable): If the action was tagging or archiving, append a record to readwise_history.md with the format described below.
+
+### History Logging Format
+
+Whenever you perform a **tagging** or **archiving** action, append a row to readwise_history.md:
+- **Date/Time**: ISO 8601 format (e.g., `2026-06-05 14:30:00`)
+- **Action Taken**: Specific action, e.g., "Added tags: ai, vs-code" or "Archived" or "Moved to later"
+- **Document Link**: Markdown link in the format `[Title](https://readwise.io/open/<document_id>)` for Reader documents, or `[Title](https://readwise.io/bookreview/<book_id>)` for Readwise highlights. If no canonical Readwise URL is available from CLI output, use the `source_url` field from the CLI response.
+
+For bulk operations (e.g., `reader-move-documents` or `reader-bulk-edit-document-metadata`):
+- If **10 or fewer** documents are affected, log one row per document.
+- If **more than 10** documents are affected, log a single summary row, e.g., "Archived 45 documents — see full list in [command output]."
 
 ## Reader Commands
 
@@ -94,8 +109,12 @@ readwise reader-get-document-details --document-id <id>
 readwise reader-get-document-highlights --document-id <id>
 
 # Highlight a passage (html-content must match the document's HTML exactly)
-# Get the HTML first via reader-list-documents with --response-fields html_content
+# IMPORTANT: Always retrieve the document's html_content first via reader-list-documents
+readwise reader-list-documents --id <document_id>
+# Then extract the exact HTML substring and use it in reader-create-highlight
 readwise reader-create-highlight --document-id <id> --html-content "<p>The exact passage to highlight</p>"
+# If the CLI returns an error indicating the passage was not found, retrieve the full HTML,
+# show it to the user, and ask them to identify the correct passage for highlighting.
 
 # Highlight with a note and tags
 readwise reader-create-highlight --document-id <id> --html-content "<p>Key insight</p>" --note "Connects to spaced repetition research" --tags review,concept
@@ -141,12 +160,13 @@ readwise reader-set-highlight-notes --document-id <id> --highlight-document-id <
 #### Auto-Tagging with tagmap.md
 
 When explicitly asked to auto-tag or process documents:
-1. Check for the existence of `tagmap.md` in the workspace.
+1. **Check for tagmap.md**: If the file does not exist in the workspace, **stop immediately** and inform the user: "No tagmap.md was found in the workspace. Please create this file with your tagging rules before running auto-tag. See the workspace tagmap.md for an example format." Do not proceed with tagging.
 2. Fetch the target documents using `reader-list-documents` (e.g., from the inbox or feed).
 3. Read the natural English rules in `tagmap.md`.
 4. Evaluate each document's **metadata only** (Title, Summary, Author) against these rules. Do not fetch full content.
+   - **If a rule references a field not in Title, Summary, or Author** (e.g., word count, publication date, tags, site_name), skip that rule and include it in the summary report as "skipped — required field [field_name] not in metadata scope."
 5. For any matches, execute `readwise reader-add-tags-to-document --document-id <id> --tag-names <tags>`.
-6. Output a summary report to the user of all the tags applied and the documents they were applied to.
+6. Output a summary report to the user of all the tags applied, the documents they were applied to, and any rules that were skipped.
 
 ### Exporting
 
@@ -158,6 +178,8 @@ readwise reader-get-export-documents-status --export-id <id>
 # Delta export — only docs updated since last export
 readwise reader-export-documents --since-updated "2024-01-01T00:00:00Z"
 ```
+
+**Export Polling Guidance**: After running `reader-export-documents`, poll the status with `reader-get-export-documents-status` every 10 seconds for up to 5 minutes. If the export is not complete after 5 minutes, inform the user that the export is still processing and provide the `export-id` so they can check manually or retrieve it later.
 
 ## Readwise Commands
 
