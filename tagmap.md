@@ -11,3 +11,4 @@ If the title contains "Samsung" tag it with "triaged" and "samsung" and move it 
 If the title contains "AMD" tag it with "linux".
 If the title contains "Chrome" tag it with "chrome".
 If the title contains "Star Wars" tag it with "star-wars" and move to "Inbox"
+If the title contains "deals" tag it with "deals" and move to "Inbox"
